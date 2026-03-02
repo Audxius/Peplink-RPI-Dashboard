@@ -1,6 +1,6 @@
 # Peplink RPi Dashboard
 
-Minimal Flask web app that logs into a Peplink router (session/cookies) and renders a lightweight ops dashboard designed for a 7" Raspberry Pi display. The browser never talks to the router directly — the Flask backend proxies all API calls using a logged-in `requests.Session()`.
+Minimal Flask web app that logs into a Peplink router and renders a lightweight ops dashboard designed for a 7" Raspberry Pi display. The browser never talks to the router directly — the Flask backend proxies all API calls using a logged-in requests.Session()`
 
 ## Features
 
@@ -23,8 +23,8 @@ Minimal Flask web app that logs into a Peplink router (session/cookies) and rend
 
 ## Install
 
-git clone https://github.com/Audxius/Peplink-RPI-Dashboard.git
-cd Peplink-RPI-Dashboard
-python -m venv .venv
-source .venv/bin/activate
-python app.py
+- git clone https://github.com/Audxius/Peplink-RPI-Dashboard.git
+- cd Peplink-RPI-Dashboard
+- python -m venv .venv
+- source .venv/bin/activate
+- python app.py
