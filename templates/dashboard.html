@@ -1,0 +1,815 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Peplink Ops Dashboard</title>
+
+        <style>
+            /* ---------- theme (CSS variables) ---------- */
+            :root {
+                --bg: #0f1115;
+                --card: #151a22;
+                --bd: #2a3240;
+                --text: #e7eaf0;
+                --muted: #a8b0bf;
+                --ok: #2bd67b;
+                --warn: #ffb020;
+                --bad: #ff4d6d;
+                --pillbg: #0f141d;
+                --pillbd: #2b3547;
+                --btnbg: #1b2230;
+                --btnbgHover: #222b3d;
+                --link: #9cc4ff;
+
+                /* sizing tuned for 7" display */
+                --base: 18px;
+                --h2: 30px;
+                --h3: 20px;
+                --pad: 14px;
+                --radius: 16px;
+                --gap: 12px;
+            }
+
+            /* light mode overrides */
+            html[data-theme="light"] {
+                --bg: #f4f6fb;
+                --card: #ffffff;
+                --bd: #d8deea;
+                --text: #0f172a;
+                --muted: #475569;
+                --ok: #1a7f37;
+                --warn: #b26a00;
+                --bad: #b00020;
+                --pillbg: #f7f9ff;
+                --pillbd: #d8deea;
+                --btnbg: #ffffff;
+                --btnbgHover: #f1f5f9;
+                --link: #1d4ed8;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 12px;
+                font-family:
+                    system-ui,
+                    -apple-system,
+                    Segoe UI,
+                    Roboto,
+                    sans-serif;
+                font-size: var(--base);
+                background: var(--bg);
+                color: var(--text);
+            }
+            a {
+                color: var(--link);
+                text-decoration: none;
+            }
+            a:hover {
+                text-decoration: underline;
+            }
+
+            .top {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: var(--gap);
+                margin-bottom: var(--gap);
+            }
+            .top h2 {
+                margin: 0;
+                font-size: var(--h2);
+                line-height: 1.1;
+            }
+
+            .controls {
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+                align-items: center;
+                justify-content: flex-end;
+            }
+
+            .card {
+                background: var(--card);
+                border: 1px solid var(--bd);
+                padding: var(--pad);
+                border-radius: var(--radius);
+            }
+            .card h3 {
+                margin: 0 0 10px 0;
+                font-size: var(--h3);
+            }
+            .sub {
+                color: var(--muted);
+                font-size: 14px;
+                margin-top: -4px;
+                margin-bottom: 10px;
+            }
+
+            .layout {
+                display: grid;
+                gap: var(--gap);
+            }
+
+            .grid {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: var(--gap);
+                align-items: start;
+            }
+
+            /* Two columns only when Tech is ON and screen is wide enough */
+            @media (min-width: 760px) {
+                body.show-tech .grid {
+                    grid-template-columns: 1.2fr 0.8fr;
+                }
+            }
+
+            .stack {
+                display: grid;
+                gap: var(--gap);
+            }
+
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 16px;
+            }
+            th,
+            td {
+                text-align: left;
+                padding: 10px 10px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+                vertical-align: top;
+            }
+            html[data-theme="light"] th,
+            html[data-theme="light"] td {
+                border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+            }
+            th {
+                color: var(--muted);
+                font-weight: 700;
+                letter-spacing: 0.02em;
+            }
+
+            .mono {
+                font-family:
+                    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+                    monospace;
+                font-size: 15px;
+            }
+            .small {
+                font-size: 14px;
+                color: var(--muted);
+            }
+
+            /* pills */
+            .pill {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 6px 10px;
+                border-radius: 999px;
+                font-size: 14px;
+                border: 1px solid var(--pillbd);
+                background: var(--pillbg);
+                line-height: 1;
+                color: var(--text);
+            }
+            .pill.ok {
+                border-color: rgba(43, 214, 123, 0.35);
+                color: var(--ok);
+            }
+            .pill.warn {
+                border-color: rgba(255, 176, 32, 0.4);
+                color: var(--warn);
+            }
+            .pill.bad {
+                border-color: rgba(255, 77, 109, 0.35);
+                color: var(--bad);
+            }
+            .pill.gray {
+                color: var(--muted);
+            }
+
+            /* pill buttons (same look as pill) */
+            button.pill {
+                cursor: pointer;
+                user-select: none;
+            }
+            button.pill:hover {
+                filter: brightness(1.06);
+            }
+            button.pill:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+            /* regular buttons (Tech/Theme/Logout) */
+            button.btn {
+                padding: 10px 14px;
+                border-radius: 14px;
+                border: 1px solid var(--bd);
+                background: var(--btnbg);
+                color: var(--text);
+                cursor: pointer;
+                font-size: 16px;
+                font-weight: 650;
+            }
+            button.btn:hover {
+                background: var(--btnbgHover);
+            }
+            button.btn:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+
+            .row {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+                flex-wrap: wrap;
+            }
+            .err {
+                color: var(--bad);
+                font-size: 16px;
+                margin-top: 8px;
+            }
+
+            /* technical toggle */
+            body:not(.show-tech) .tech {
+                display: none !important;
+            }
+            body:not(.show-tech) .tech-card {
+                display: none !important;
+            }
+
+            /* when Tech OFF: keep everything one column (already 1-col), and UI more compact */
+            body:not(.show-tech) .sub {
+                display: none;
+            }
+        </style>
+    </head>
+
+    <body>
+        <div class="top">
+            <h2>Dashboard</h2>
+
+            <div class="controls">
+                <button class="btn" id="btnTech" onclick="toggleTech()">
+                    Tech: OFF
+                </button>
+                <button class="btn" id="btnTheme" onclick="toggleTheme()">
+                    Theme: Light
+                </button>
+                <button class="btn" onclick="location.href = '/logout'">
+                    Logout
+                </button>
+            </div>
+        </div>
+
+        <!-- AP must be on top when Tech is OFF (and also when ON) -->
+        <div class="layout">
+            <div class="card" id="ap_card">
+                <h3>AP</h3>
+                <div id="ap_err" class="err"></div>
+                <div class="row" id="ap_row"></div>
+                <div class="row" style="margin-top: 10px">
+                    <button
+                        class="pill gray"
+                        id="btn_ap_on"
+                        onclick="toggleAp(true)"
+                    >
+                        AP ON
+                    </button>
+                    <button
+                        class="pill gray"
+                        id="btn_ap_off"
+                        onclick="toggleAp(false)"
+                    >
+                        AP OFF
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid">
+                <div class="stack">
+                    <div class="card">
+                        <h3>WAN</h3>
+                        <div class="sub">
+                            Active link = first enabled WAN with message
+                            “Connected”.
+                        </div>
+                        <div id="wan_summary" class="row"></div>
+                        <div id="wan_err" class="err"></div>
+                        <div id="wan_table_wrap"></div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Clients</h3>
+                        <div id="clients_summary" class="row"></div>
+                        <div id="clients_err" class="err"></div>
+                        <div id="clients_table_wrap"></div>
+                    </div>
+
+                    <div class="card tech-card">
+                        <h3>LAN profiles</h3>
+                        <div id="lan_err" class="err"></div>
+                        <div id="lan_table_wrap"></div>
+                    </div>
+                </div>
+
+                <div class="stack">
+                    <div class="card tech-card">
+                        <h3>WAN allowance</h3>
+                        <div id="allowance_err" class="err"></div>
+                        <div id="allowance_table_wrap"></div>
+                    </div>
+
+                    <div class="card tech-card">
+                        <h3>SpeedFusion / PepVPN</h3>
+                        <div id="pepvpn_summary" class="row"></div>
+                        <div id="pepvpn_err" class="err"></div>
+                        <div id="pepvpn_table_wrap"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            /* ---------- prefs (DEFAULTS: Tech OFF, Theme LIGHT) ---------- */
+            function loadPrefs() {
+                if (localStorage.getItem("showTech") === null)
+                    localStorage.setItem("showTech", "0");
+                if (localStorage.getItem("theme") === null)
+                    localStorage.setItem("theme", "light");
+                applyPrefs();
+            }
+
+            function applyPrefs() {
+                const showTech = localStorage.getItem("showTech") === "1";
+                document.body.classList.toggle("show-tech", showTech);
+                document.getElementById("btnTech").textContent = showTech
+                    ? "Tech: ON"
+                    : "Tech: OFF";
+
+                const theme = localStorage.getItem("theme") || "light";
+                document.documentElement.setAttribute(
+                    "data-theme",
+                    theme === "dark" ? "dark" : "light",
+                );
+                document.getElementById("btnTheme").textContent =
+                    theme === "dark" ? "Theme: Dark" : "Theme: Light";
+            }
+
+            function toggleTech() {
+                const showTech = localStorage.getItem("showTech") === "1";
+                localStorage.setItem("showTech", showTech ? "0" : "1");
+                applyPrefs();
+                pollFast();
+                pollSlow();
+            }
+
+            function toggleTheme() {
+                const theme = localStorage.getItem("theme") || "light";
+                localStorage.setItem(
+                    "theme",
+                    theme === "dark" ? "light" : "dark",
+                );
+                applyPrefs();
+            }
+
+            /* ---------- helpers ---------- */
+            async function fetchJson(url) {
+                const r = await fetch(url, { credentials: "same-origin" });
+                if (!r.ok) throw new Error(`${url} -> HTTP ${r.status}`);
+                return await r.json();
+            }
+
+            function esc(s) {
+                return String(s ?? "").replace(
+                    /[&<>"']/g,
+                    (c) =>
+                        ({
+                            "&": "&amp;",
+                            "<": "&lt;",
+                            ">": "&gt;",
+                            '"': "&quot;",
+                            "'": "&#39;",
+                        })[c],
+                );
+            }
+
+            function secsToHMS(secs) {
+                secs = Number(secs || 0);
+                const h = Math.floor(secs / 3600);
+                const m = Math.floor((secs % 3600) / 60);
+                const s = Math.floor(secs % 60);
+                const pad = (n) => String(n).padStart(2, "0");
+                return `${h}:${pad(m)}:${pad(s)}`;
+            }
+
+            function pill(text, kind = "gray") {
+                return `<span class="pill ${kind}">${esc(text)}</span>`;
+            }
+
+            function ledToKind(statusLed, message) {
+                const led = String(statusLed || "").toLowerCase();
+                const msg = String(message || "").toLowerCase();
+                if (led === "green" || msg.includes("connected")) return "ok";
+                if (
+                    led === "flash" ||
+                    msg.includes("reset") ||
+                    msg.includes("connecting")
+                )
+                    return "warn";
+                if (
+                    msg.includes("fail") ||
+                    msg.includes("error") ||
+                    msg.includes("disconnected")
+                )
+                    return "bad";
+                return "gray";
+            }
+
+            function makeTable(headers, rowsHtml) {
+                const th = headers.map((h) => `<th>${esc(h)}</th>`).join("");
+                return `<table><thead><tr>${th}</tr></thead><tbody>${rowsHtml.join("")}</tbody></table>`;
+            }
+
+            function showTech() {
+                return document.body.classList.contains("show-tech");
+            }
+
+            /* ---------- renderers ---------- */
+            function renderWan(data) {
+                const wrap = document.getElementById("wan_table_wrap");
+                const sum = document.getElementById("wan_summary");
+
+                if (!data || data.stat !== "ok") {
+                    wrap.innerHTML = "";
+                    sum.innerHTML = pill("WAN API error", "bad");
+                    return;
+                }
+
+                const r = data.response || {};
+                const order = Array.isArray(r.order)
+                    ? r.order
+                    : Object.keys(r)
+                          .filter((k) => k !== "order")
+                          .map((k) => Number(k))
+                          .filter((n) => !Number.isNaN(n));
+
+                const wans = order
+                    .map((id) => ({ id, ...r[String(id)] }))
+                    .filter((x) => x && typeof x === "object" && x.name);
+
+                const active =
+                    wans.find(
+                        (w) => w.enable && String(w.message) === "Connected",
+                    ) || null;
+                const connectedCount = wans.filter(
+                    (w) => w.enable && String(w.message) === "Connected",
+                ).length;
+                const enabledCount = wans.filter((w) => w.enable).length;
+
+                sum.innerHTML = [
+                    pill(
+                        `Active: ${active ? active.name : "none"}`,
+                        active ? "ok" : "bad",
+                    ),
+                    pill(
+                        `Enabled ${enabledCount}/${wans.length}`,
+                        enabledCount ? "ok" : "bad",
+                    ),
+                    pill(
+                        `Connected ${connectedCount}`,
+                        connectedCount ? "ok" : "bad",
+                    ),
+                ].join(" ");
+
+                const tech = showTech();
+
+                const rows = wans.map((w) => {
+                    const kind = ledToKind(w.statusLed, w.message);
+                    const isActive = active && active.portId === w.portId;
+
+                    if (!tech) {
+                        return `
+        <tr>
+          <td>
+            <div style="font-weight:800;font-size:20px;">${esc(w.name)} ${isActive ? pill("ACTIVE", "ok") : ""}</div>
+            <div class="small">type: ${esc(w.type)} • prio: ${esc(w.priority ?? "—")} • uptime: ${esc(secsToHMS(w.uptime || 0))}</div>
+          </td>
+          <td>${pill(w.message || "—", kind)}</td>
+        </tr>
+      `;
+                    }
+
+                    const ipCell = w.ip
+                        ? `<span class="mono">${esc(w.ip)}/${esc(w.mask)}</span>`
+                        : `<span class="small">—</span>`;
+                    const gwCell = w.gateway
+                        ? `<span class="mono">${esc(w.gateway)}</span>`
+                        : `<span class="small">—</span>`;
+                    const dnsCell =
+                        Array.isArray(w.dns) && w.dns.length
+                            ? w.dns
+                                  .map(
+                                      (x) =>
+                                          `<span class="mono">${esc(x)}</span>`,
+                                  )
+                                  .join("<br/>")
+                            : `<span class="small">—</span>`;
+                    const upCell = `<span class="mono">${esc(secsToHMS(w.uptime || 0))}</span>`;
+
+                    return `
+      <tr>
+        <td>${esc(w.name)} ${isActive ? pill("ACTIVE", "ok") : ""}<div class="small">type: ${esc(w.type)} • method: ${esc(w.method)} • mtu: ${esc(w.mtu)}</div></td>
+        <td>${pill(w.message || "—", kind)}<div class="small">LED: ${esc(w.statusLed || "—")} • prio: ${esc(w.priority ?? "—")}</div></td>
+        <td>${ipCell}</td>
+        <td>${gwCell}</td>
+        <td>${dnsCell}</td>
+        <td>${upCell}</td>
+      </tr>
+    `;
+                });
+
+                wrap.innerHTML = tech
+                    ? makeTable(
+                          ["WAN", "State", "IP", "Gateway", "DNS", "Uptime"],
+                          rows,
+                      )
+                    : makeTable(["WAN", "State"], rows);
+            }
+
+            function renderClients(data) {
+                const wrap = document.getElementById("clients_table_wrap");
+                const sum = document.getElementById("clients_summary");
+
+                if (!data || data.stat !== "ok") {
+                    wrap.innerHTML = "";
+                    sum.innerHTML = pill("Clients API error", "bad");
+                    return;
+                }
+
+                const list =
+                    data.response && Array.isArray(data.response.list)
+                        ? data.response.list
+                        : [];
+                const online = list.filter((c) => c.active).length;
+                const tech = showTech();
+
+                sum.innerHTML = [
+                    pill(`${online} online`, online ? "ok" : "warn"),
+                    pill(`Total ${list.length}`, "gray"),
+                ].join(" ");
+
+                const rows = list.map((c) => {
+                    const state = c.active
+                        ? pill("online", "ok")
+                        : pill("offline", "gray");
+
+                    if (!tech) {
+                        return `
+        <tr>
+          <td><div style="font-weight:800;font-size:20px;">${esc(c.name || "—")}</div><div class="small">${esc(c.connectionType || "—")}</div></td>
+          <td>${state}</td>
+        </tr>
+      `;
+                    }
+
+                    const conn = c.connectionType ? esc(c.connectionType) : "—";
+                    const lease = c.lease
+                        ? `${esc(c.lease.type || "—")} • ${secsToHMS(c.lease.expiresIn || 0)}`
+                        : "—";
+
+                    return `
+      <tr>
+        <td>${esc(c.name || "—")}</td>
+        <td>${state}</td>
+        <td class="mono">${esc(c.ip || "—")}</td>
+        <td class="mono">${esc(c.mac || "—")}</td>
+        <td>${conn}</td>
+        <td>${esc(lease)}</td>
+      </tr>
+    `;
+                });
+
+                wrap.innerHTML = tech
+                    ? makeTable(
+                          ["Name", "State", "IP", "MAC", "Conn", "Lease"],
+                          rows,
+                      )
+                    : makeTable(["Client", "State"], rows);
+            }
+
+            function renderLanProfiles(data) {
+                const wrap = document.getElementById("lan_table_wrap");
+                if (!data || data.stat !== "ok") {
+                    wrap.innerHTML = "";
+                    return;
+                }
+
+                const r = data.response || {};
+                const order = Array.isArray(r.order) ? r.order : [];
+                const rows = order.map((id) => {
+                    const p = r[String(id)] || {};
+                    const ip = p.ip
+                        ? `<span class="mono">${esc(p.ip)}</span>`
+                        : "—";
+                    const mask =
+                        p.mask !== undefined
+                            ? `<span class="mono">/${esc(p.mask)}</span>`
+                            : "";
+                    return `<tr><td>${esc(id)}</td><td>${ip}${mask}</td></tr>`;
+                });
+
+                wrap.innerHTML = makeTable(["Profile", "IP/Mask"], rows);
+            }
+
+            function renderAllowance(data) {
+                const wrap = document.getElementById("allowance_table_wrap");
+                if (!data || data.stat !== "ok") {
+                    wrap.innerHTML = "";
+                    return;
+                }
+
+                const r = data.response || {};
+                const order = Array.isArray(r.order) ? r.order : [];
+
+                const rows = order.map((id) => {
+                    const entry = r[String(id)];
+                    if (
+                        entry &&
+                        typeof entry === "object" &&
+                        entry.enable !== undefined
+                    ) {
+                        const kind = entry.enable ? "ok" : "gray";
+                        return `<tr><td>${esc(id)}</td><td>${pill(entry.enable ? "enabled" : "disabled", kind)}</td><td>—</td></tr>`;
+                    }
+                    if (entry && typeof entry === "object") {
+                        const simIds = Object.keys(entry).filter(
+                            (k) => k !== "order",
+                        );
+                        if (simIds.length) {
+                            return simIds
+                                .map((simId) => {
+                                    const sim = entry[simId] || {};
+                                    const kind = sim.enable ? "ok" : "gray";
+                                    return `<tr><td>${esc(id)}</td><td>${pill(sim.enable ? "enabled" : "disabled", kind)}</td><td>SIM ${esc(simId)}</td></tr>`;
+                                })
+                                .join("");
+                        }
+                    }
+                    return `<tr><td>${esc(id)}</td><td>${pill("unknown", "gray")}</td><td>—</td></tr>`;
+                });
+
+                wrap.innerHTML = makeTable(
+                    ["WAN", "Allowance", "Detail"],
+                    rows,
+                );
+            }
+
+            function renderPepvpn(data) {
+                const sum = document.getElementById("pepvpn_summary");
+                const wrap = document.getElementById("pepvpn_table_wrap");
+
+                if (!data || data.stat !== "ok") {
+                    sum.innerHTML = pill("PepVPN API error", "bad");
+                    wrap.innerHTML = "";
+                    return;
+                }
+
+                const notice =
+                    data.notice && data.notice.status
+                        ? data.notice.status
+                        : null;
+                const r = data.response || {};
+                const tunnelCount = Object.keys(r).length;
+
+                sum.innerHTML = [
+                    pill(`${tunnelCount} tunnels`, tunnelCount ? "ok" : "gray"),
+                    notice
+                        ? pill(`notice ${notice}`, "warn")
+                        : pill("notice none", "gray"),
+                ].join(" ");
+
+                if (!tunnelCount) {
+                    wrap.innerHTML = `<div class="small">No tunnels reported.</div>`;
+                    return;
+                }
+
+                const rows = Object.entries(r).map(
+                    ([k, v]) =>
+                        `<tr><td>${esc(k)}</td><td><pre class="mono" style="margin:0">${esc(JSON.stringify(v, null, 2))}</pre></td></tr>`,
+                );
+                wrap.innerHTML = makeTable(["Key", "Data"], rows);
+            }
+
+            function renderAp(data) {
+                const row = document.getElementById("ap_row");
+                if (!data || data.stat !== "ok") {
+                    row.innerHTML = pill("AP API error", "bad");
+                    return;
+                }
+
+                const r = data.response || {};
+                const support = !!r.support;
+                const enabled = !!r.enable;
+
+                // info pills (support always visible; wanDependent only in tech mode)
+                row.innerHTML = [
+                    pill(`support ${support}`, support ? "ok" : "bad"),
+                    showTech()
+                        ? pill(`wanDependent ${!!r.wanDependent}`, "gray")
+                        : "",
+                ]
+                    .filter(Boolean)
+                    .join(" ");
+
+                const btnOn = document.getElementById("btn_ap_on");
+                const btnOff = document.getElementById("btn_ap_off");
+
+                btnOn.disabled = !support;
+                btnOff.disabled = !support;
+
+                // styling per state:
+                // enabled -> ON green, OFF gray
+                // disabled -> OFF red, ON gray
+                btnOn.className = "pill " + (enabled ? "ok" : "gray");
+                btnOff.className = "pill " + (enabled ? "gray" : "bad");
+            }
+
+            /* ---------- polling ---------- */
+            async function pollFast() {
+                document.getElementById("wan_err").textContent = "";
+                document.getElementById("ap_err").textContent = "";
+                document.getElementById("pepvpn_err").textContent = "";
+                try {
+                    const [wan, ap, pepvpn] = await Promise.all([
+                        fetchJson("/api/wan"),
+                        fetchJson("/api/ap"),
+                        fetchJson("/api/pepvpn"),
+                    ]);
+                    renderWan(wan);
+                    renderAp(ap);
+                    if (showTech()) renderPepvpn(pepvpn);
+                } catch (e) {
+                    document.getElementById("wan_err").textContent = String(e);
+                }
+            }
+
+            async function pollSlow() {
+                document.getElementById("clients_err").textContent = "";
+                document.getElementById("lan_err").textContent = "";
+                document.getElementById("allowance_err").textContent = "";
+                try {
+                    const [clients, lan, allowance] = await Promise.all([
+                        fetchJson("/api/clients"),
+                        fetchJson("/api/lan_profiles"),
+                        fetchJson("/api/wan_allowance"),
+                    ]);
+                    renderClients(clients);
+                    if (showTech()) {
+                        renderLanProfiles(lan);
+                        renderAllowance(allowance);
+                    }
+                } catch (e) {
+                    document.getElementById("clients_err").textContent =
+                        String(e);
+                }
+            }
+
+            async function toggleAp(enable) {
+                document.getElementById("ap_err").textContent = "";
+                try {
+                    const r = await fetch("/api/ap/toggle", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ enable: !!enable }),
+                        credentials: "same-origin",
+                    });
+                    const data = await r.json();
+                    if (!r.ok)
+                        throw new Error(
+                            `AP toggle failed: HTTP ${r.status} ${JSON.stringify(data)}`,
+                        );
+                    await pollFast();
+                } catch (e) {
+                    document.getElementById("ap_err").textContent = String(e);
+                }
+            }
+
+            /* ---------- start ---------- */
+            loadPrefs();
+            pollFast();
+            pollSlow();
+            setInterval(pollFast, 2500);
+            setInterval(pollSlow, 10000);
+        </script>
+    </body>
+</html>
